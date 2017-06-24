@@ -265,10 +265,11 @@ class dlpc(object):
         mbox_num = bits_to_bytes(conv_len(mbox_num, 8))
         self.command('w', 0x00, 0x1a, 0x33, mbox_num)
 
-    def pattern_setup(self, trig_type, pat_num, bit_depth, led_select, do_invert_pat, do_insert_black, do_buf_swap, do_trig_out_prev):
+    def dlpc350_send_pat_lut(self, trig_type, pat_num, bit_depth, led_select, do_invert_pat, do_insert_black, do_buf_swap,
+                             do_trig_out_prev):
         """
-        Mailbox content to setup pattern definition. See table 2-65 in programmer's guide for detailed desciprtion of
-        pattern LUT entries..
+        Mailbox content to setup pattern definition. See table 2-65 in programmer's guide for detailed description of
+        pattern LUT entries.
         (USB: CMD2: 0x1A, CMD3: 0x34)
 
         :param trig_type: Select the trigger type for the pattern
@@ -281,7 +282,8 @@ class dlpc(object):
             maximum number supported is 24 for 1 bit-depth patterns. Setting the pattern number to be 25, with a
             bit-depth of 1 will insert a white-fill pattern. Inverting this pattern will insert a black-fill pattern.
             These patterns will have the same exposure time as defined in the Pattern Display Exposure and Frame Period
-            command. Table 2-66 in the programmer's guide illustrates which bit planes are illuminated by each pattern number.
+            command. Table 2-66 in the programmer's guide illustrates which bit planes are illuminated by each pattern
+            number.
         :param bit_depth: Select desired bit-depth
                           0 = Reserved
                           1 = 1-bit
@@ -292,11 +294,28 @@ class dlpc(object):
                           6 = 6-bit
                           7 = 7-bit
                           8 = 8-bit
-        :param led_select:
-        :param do_invert_pat:
-        :param do_insert_black:
-        :param do_buf_swap:
-        :param do_trig_out_prev:
+        :param led_select: Choose the LEDs that are on: b0 = Red, b1 = Green, b2 = Blue
+                           0 = No LED (Pass Through)
+                           1 = Red
+                           2 = Green
+                           3 = Yellow (Green + Red)
+                           4 = Blue
+                           5 = Magenta (Blue + Red)
+                           6 = Cyan (Blue + Green)
+                           7 = White (Red + Blue + Green)
+        :param do_invert_pat: True = Invert pattern
+                              False = do not invert pattern
+        :param do_insert_black: True = Insert black-fill pattern after current pattern. This setting requires 230 μs
+                                       of time before the start of the next pattern
+                                False = do not insert any post pattern
+        :param do_buf_swap: True = perform a buffer swap
+                            False = do not perform a buffer swap
+        :param do_trig_out_prev: True = Trigger Out 1 will continue to be high. There will be no falling edge
+                                        between the end of the previous pattern and the start of the current pattern.
+                                        Exposure time is shared between all patterns defined under a common
+                                        trigger out). This setting cannot be combined with the black-fill pattern
+                                 False = Trigger Out 1 has a rising edge at the start of a pattern, and a falling
+                                         edge at the end of the pattern
 
         """
         # byte 0
@@ -304,15 +323,12 @@ class dlpc(object):
         pat_num = conv_len(pat_num, 6)
 
         byte_0 = pat_num + trig_type
-        # print('byte0:', byte_0)
 
         # byte 1
         bit_depth = conv_len(bit_depth, 4)
         led_select = conv_len(led_select, 4)
 
-        # byte_1 = bit_depth + leds
         byte_1 = led_select + bit_depth
-        # print('byte1:', byte_1)
 
         # byte 2
         do_invert_pat = str(int(do_invert_pat))
@@ -320,22 +336,18 @@ class dlpc(object):
         do_buf_swap = str(int(do_buf_swap))
         do_trig_out_prev = str(int(do_trig_out_prev))
 
-        # byte_2 = '0000' + do_invert + do_clear_dmd + do_swap + do_trigger
         byte_2 = '0000' + do_trig_out_prev + do_buf_swap + do_insert_black + do_invert_pat
-        # print('byte2:', byte_2)
 
         payload = byte_2 + byte_1 + byte_0
-        # payload = byte_0 + byte_1 + byte_2
-        # payload *= 3
-        # print(payload)
         payload = bits_to_bytes(payload)
 
         self.command('w', 0x00, 0x1a, 0x34, payload)
 
-    def validate(self):
+    def dlpc350_start_pat_lut_validate(self):
         """
-        Validates the pattern sequence
-        :return:
+        This API checks the programmed pattern display modes and indicates any invalid settings. This command needs to
+        be executed after all pattern display configurations have been completed.
+        (USB: CMD2: 0x1A, CMD3: 0x1A)
         """
         self.command('w', 0x00, 0x1a, 0x1a, bits_to_bytes(conv_len(0x00, 8)))
         print(bin(self.ans[0]))
@@ -376,38 +388,36 @@ def pattern_mode():
     # 7: Set up LUT
     lcr.dlpc350_open_mailbox(2)
     lcr.dlpc350_mailbox_set_addr(0)
-    lcr.pattern_setup(trig_type=0b01,
-                      pat_num=0,
-                      bit_depth=7,
-                      led_select=color,
-                      do_invert_pat=False,
-                      do_insert_black=False,
-                      do_buf_swap=False,
-                      do_trig_out_prev=False)
+    lcr.dlpc350_send_pat_lut(trig_type=0b01,
+                             pat_num=0,
+                             bit_depth=7,
+                             led_select=color,
+                             do_invert_pat=False,
+                             do_insert_black=False,
+                             do_buf_swap=False,
+                             do_trig_out_prev=False)
     lcr.dlpc350_mailbox_set_addr(1)
-    lcr.pattern_setup(trig_type=0b11,
-                      pat_num=1,
-                      bit_depth=7,
-                      led_select=color,
-                      do_invert_pat=False,
-                      do_insert_black=False,
-                      do_buf_swap=False,
-                      do_trig_out_prev=False)
+    lcr.dlpc350_send_pat_lut(trig_type=0b11,
+                             pat_num=1,
+                             bit_depth=7,
+                             led_select=color,
+                             do_invert_pat=False,
+                             do_insert_black=False,
+                             do_buf_swap=False,
+                             do_trig_out_prev=False)
     lcr.dlpc350_mailbox_set_addr(2)
-    lcr.pattern_setup(trig_type=0b11,
-                      pat_num=2,
-                      bit_depth=7,
-                      led_select=color,
-                      do_invert_pat=False,
-                      do_insert_black=False,
-                      do_buf_swap=False,
-                      do_trig_out_prev=False)
+    lcr.dlpc350_send_pat_lut(trig_type=0b11,
+                             pat_num=2,
+                             bit_depth=7,
+                             led_select=color,
+                             do_invert_pat=False,
+                             do_insert_black=False,
+                             do_buf_swap=False,
+                             do_trig_out_prev=False)
     lcr.dlpc350_open_mailbox(0)
 
-    # lcr.pattern_setup(0b00, 0, 7, 0b0111, False, False, False, False)
-    # lcr.pattern_setup(0b00, 0, 7, 0b0111, False, False, False, False)
     # 8/9: validate
-    lcr.validate()
+    lcr.dlpc350_start_pat_lut_validate()
 
     # 10: start sequence
     lcr.start_sequence()
