@@ -5,9 +5,10 @@ import numpy as np
 import time
 
 """
-https://github.com/csi-dcsc/Pycrafter6500
+Adapted for lcr4500 from https://github.com/csi-dcsc/Pycrafter6500
 
-doc: http://www.ti.com/lit/ug/dlpu010f/dlpu010f.pdf
+Docs: http://www.ti.com/lit/ug/dlpu010f/dlpu010f.pdf
+Doc strings adapted from dlpc450_api.cpp from source code
 """
 
 
@@ -24,11 +25,12 @@ def conv_len(a, l):
     return b
 
 
-def bits_to_bytes(a):
+def bits_to_bytes(a, reverse=True):
     """
     Function that converts bit string into a given number of bytes
     :param a: bites to convert
-    :return: bytes
+    :param reverse: whether or not to reverse the byte list
+    :return: list of bytes
     """
     bytelist = []
 
@@ -41,14 +43,15 @@ def bits_to_bytes(a):
     for i in range(len(a) // 8):
         bytelist.append(int(a[8 * i:8 * (i + 1)], 2))
 
-    bytelist.reverse()
+    if reverse:
+        bytelist.reverse()
     return bytelist
 
 
 class dlpc(object):
     """
     Class representing dmd controller.
-    Can connect to different DLPCs by changing product ID. Check hardware ID in
+    Can connect to different DLPCs by changing product ID. Check IDs in
     device manager.
     """
     def __init__(self):
@@ -64,33 +67,37 @@ class dlpc(object):
     def release(self):
         """
         Release USB device
-        :return:
         """
         self.dlpc.reset()
 
     def command(self, mode, sequence_byte, com1, com2, data=None):
         """
         Sends a command to the dlpc
-        :param mod: whether reading or writing
+        :param mode: whether reading or writing
         :param sequence_byte:
-        :param com1:
-        :param com2:
-        :param data: data for command
-        :return:
+        :param com1: command 1
+        :param com2: command 3
+        :param data: data to pass with command
         """
+        print(hex(com1), hex(com2), end=': ')
+        for i in reversed(data):
+            print(hex(i), end=' ')
+        print()
+        # return
+
         buffer = []
 
-        flagstring = '1' if mode == 'r' else '0'
-        flagstring += '1000000'
-        flagstring = bits_to_bytes(flagstring)[0]
+        if mode == 'r':
+            flagstring = 0xc0  # 0b11000000
+        else:
+            flagstring = 0x40  # 0b01000000
 
         data_len = conv_len(len(data) + 2, 16)
         data_len = bits_to_bytes(data_len)
 
         buffer.append(flagstring)
         buffer.append(sequence_byte)
-        buffer.append(data_len[0])
-        buffer.append(data_len[1])
+        buffer.extend(data_len)
         buffer.append(com2)
         buffer.append(com1)
 
@@ -131,14 +138,8 @@ class dlpc(object):
 
         # done writing, read feedback from dlpc
         self.ans = self.dlpc.read(0x81, 64)
-
-    def check_for_errors(self):
-        """"
-        Checks response for errors
-        """
-        self.command('r', 0x22, 0x01, 0x00, [])
-        if self.ans[6] != 0:
-            print(self.ans[6])
+        # wait a bit between commands
+        time.sleep(0.02)
 
     def read_reply(self):
         """
@@ -152,41 +153,35 @@ class dlpc(object):
         Put the dmd into power down
         """
         self.command('w', 0x00, 0x02, 0x00, [1])
-        # self.check_for_errors()
 
     def wakeup(self):
         """
         Put the dmd into power down
         """
         self.command('w', 0x00, 0x02, 0x00, [0])
-        # self.check_for_errors()
 
     def change_mode(self, mode):
         # 0 is video
         # 1 is pattern
         self.command('w', 0x00, 0x1a, 0x1b, [mode])
-        # self.check_for_errors()
 
     def start_sequence(self):
         """
         Starts a pattern sequence
         """
         self.command('w', 0x00, 0x1a, 0x24, [2])
-        # self.check_for_errors()
 
     def pause_sequence(self):
         """
         Starts a pattern sequence
         """
         self.command('w', 0x00, 0x1a, 0x24, [1])
-        # self.check_for_errors()
 
     def stop_sequence(self):
         """
         Starts a pattern sequence
         """
         self.command('w', 0x00, 0x1a, 0x24, [0])
-        # self.check_for_errors()
 
     def sequence_input(self, mode=0):
         """
@@ -203,85 +198,136 @@ class dlpc(object):
         """
         self.command('w', 0x00, 0x1a, 0x23, [mode])
 
-    def sequence_exp_per(self, exp, per):
+    def dlpc350_set_exposure_frame_period(self, exposure_period, frame_period):
         """
-        Selects the exposure and frame period for the pattern sequence
-        :param exp: pattern exposure time (us, 4 bytes)
-        :param per: frame period (us, 4 bytes)
-        """
-        exp = conv_len(exp, 32)
-        per = conv_len(per, 32)
+        The Pattern Display Exposure and Frame Period dictates the time a pattern is exposed and the frame period.
+        Either the exposure time must be equivalent to the frame period, or the exposure time must be less than the
+        frame period by 230 microseconds. Before executing this command, stop the current pattern sequence. After
+        executing this command, call DLPC350_ValidatePatLutData() API before starting the pattern sequence.
+        (USB: CMD2: 0x1A, CMD3: 0x29)
 
-        payload = exp + per
+        :param exposure_period: exposure time in microseconds (4 bytes)
+        :param frame_period: frame period in microseconds (4 bytes)
+        """
+        exposure_period = conv_len(exposure_period, 32)
+        frame_period = conv_len(frame_period, 32)
+
+        payload = frame_period + exposure_period
         payload = bits_to_bytes(payload)
 
         self.command('w', 0x00, 0x1a, 0x29, payload)
 
-    def sequence_control(self, num_lut=2, to_repeat=True, num_patterns=2, num_flash=0):
+    def dlpc350_set_pattern_config(self, num_lut_entries=1, to_repeat=True, num_pats_for_trig_out2=3, num_images=0):
         """
-        TBD
-        :param num_lut:
-        :param to_repeat: whether or not the pattern sequence repeats, bool
-        :param num_patterns:
-        :param _:
-        :return:
-        """
-        num_lut = conv_len(num_lut, 7) + '0'
-        to_repeat = str(int(to_repeat)) + '0000000'
-        num_patterns = conv_len(num_patterns, 8)
-        num_flash = conv_len(num_flash, 6) + '00'
+        This API controls the execution of patterns stored in the lookup table. Before using this API, stop the current
+        pattern sequence using DLPC350_PatternDisplay() API. After calling this API, send the Validation command using
+        the API DLPC350_ValidatePatLutData() before starting the pattern sequence.
+        (USB: CMD2: 0x1A, CMD3: 0x31)
 
-        payload = num_lut + to_repeat + num_patterns + num_flash
+        :param num_lut_entries: number of LUT entries
+        :param to_repeat: True = execute the pattern sequence once; False = repeat the pattern sequence
+        :param num_pats_for_trig_out2: Number of patterns to display(range 1 through 256). If in repeat mode, then this
+            value dictates how often TRIG_OUT_2 is generated
+        :param num_images: Number of Image Index LUT Entries(range 1 through 64). This Field is irrelevant for Pattern
+            Display Data Input Source set to a value other than internal
+        """
+        num_lut_entries = '0' + conv_len(num_lut_entries - 1, 7)
+        to_repeat = '0000000' + str(int(to_repeat))
+        num_pats_for_trig_out2 = conv_len(num_pats_for_trig_out2 - 1, 8)
+        num_images = '00' + conv_len(num_images, 6)
+
+        payload = num_images + num_pats_for_trig_out2 + to_repeat + num_lut_entries
         payload = bits_to_bytes(payload)
 
         self.command('w', 0x00, 0x1a, 0x31, payload)
 
-    def mailbox_setup(self, value):
+    def dlpc350_mailbox_set_addr(self, addr=0):
         """
-        Mailbox to send data to appropriate registers
-        :param value:
-        0 = Disable (close) the mailboxes
-        1 = Open the mailbox for image index configuration
-        2 = Open the mailbox for pattern definition
-        3 = Open the mailbox for variable exposure pattern definition
-        """
-        value = bits_to_bytes(conv_len(value, 8))
-        self.command('w', 0x00, 0x1a, 0x33, value)
+        This API defines the offset location within the DLPC350 mailboxes to write data into or to read data from.
+        (USB: CMD2: 0x1A, CMD3: 0x32)
 
-    def pattern_setup(self, trigger, pattern_number, bit_depth, leds, do_invert, do_clear_dmd, do_swap, do_trigger):
+        :param addr: Defines the offset within the selected (opened) LUT to write/read data to/from (0-127)
         """
-        Mailbox content to setup pattern definition
-        :param trigger:
-        :param pattern_number:
-        :param bit_depth:
-        :param leds:
-        :param do_invert:
-        :param clear_dmd:
-        :param do_swap:
-        :param do_trigger:
-        :return:
+        addr = bits_to_bytes(conv_len(addr, 8))
+        self.command('w', 0x00, 0x1a, 0x32, addr)
+
+    def dlpc350_open_mailbox(self, mbox_num):
+        """
+        This API opens the specified Mailbox within the DLPC350 controller. This API must be called before sending data
+        to the mailbox/LUT using DLPC350_SendPatLut() or DLPC350_SendImageLut() APIs.
+        (USB: CMD2: 0x1A, CMD3: 0x33)
+
+        :param mbox_num: 0 = Disable (close) the mailboxes
+                         1 = Open the mailbox for image index configuration
+                         2 = Open the mailbox for pattern definition
+                         3 = Open the mailbox for the Variable Exposure
+        """
+        mbox_num = bits_to_bytes(conv_len(mbox_num, 8))
+        self.command('w', 0x00, 0x1a, 0x33, mbox_num)
+
+    def pattern_setup(self, trig_type, pat_num, bit_depth, led_select, do_invert_pat, do_insert_black, do_buf_swap, do_trig_out_prev):
+        """
+        Mailbox content to setup pattern definition. See table 2-65 in programmer's guide for detailed desciprtion of
+        pattern LUT entries..
+        (USB: CMD2: 0x1A, CMD3: 0x34)
+
+        :param trig_type: Select the trigger type for the pattern
+                          0 = Internal trigger
+                          1 = External positive
+                          2 = External negative
+                          3 = No Input Trigger (Continue from previous; Pattern still has full exposure time)
+                          0x3FF = Full Red Foreground color intensity
+        :param pat_num: Pattern number (0 based index). For pattern number 0x3F, there is no pattern display. The
+            maximum number supported is 24 for 1 bit-depth patterns. Setting the pattern number to be 25, with a
+            bit-depth of 1 will insert a white-fill pattern. Inverting this pattern will insert a black-fill pattern.
+            These patterns will have the same exposure time as defined in the Pattern Display Exposure and Frame Period
+            command. Table 2-66 in the programmer's guide illustrates which bit planes are illuminated by each pattern number.
+        :param bit_depth: Select desired bit-depth
+                          0 = Reserved
+                          1 = 1-bit
+                          2 = 2-bit
+                          3 = 3-bit
+                          4 = 4-bit
+                          5 = 5-bit
+                          6 = 6-bit
+                          7 = 7-bit
+                          8 = 8-bit
+        :param led_select:
+        :param do_invert_pat:
+        :param do_insert_black:
+        :param do_buf_swap:
+        :param do_trig_out_prev:
+
         """
         # byte 0
-        trigger = conv_len(trigger, 2)
-        pattern_number = conv_len(pattern_number, 6)
+        trig_type = conv_len(trig_type, 2)
+        pat_num = conv_len(pat_num, 6)
 
-        byte_0 = trigger + pattern_number
+        byte_0 = pat_num + trig_type
+        # print('byte0:', byte_0)
 
         # byte 1
         bit_depth = conv_len(bit_depth, 4)
-        leds = conv_len(leds, 4)
+        led_select = conv_len(led_select, 4)
 
-        byte_1 = bit_depth + leds
+        # byte_1 = bit_depth + leds
+        byte_1 = led_select + bit_depth
+        # print('byte1:', byte_1)
 
         # byte 2
-        do_invert = str(int(do_invert))
-        do_clear_dmd = str(int(do_clear_dmd))
-        do_swap = str(int(do_swap))
-        do_trigger = str(int(do_trigger))
+        do_invert_pat = str(int(do_invert_pat))
+        do_insert_black = str(int(do_insert_black))
+        do_buf_swap = str(int(do_buf_swap))
+        do_trig_out_prev = str(int(do_trig_out_prev))
 
-        byte_2 = do_invert + do_clear_dmd + do_swap + do_trigger + '0000'
+        # byte_2 = '0000' + do_invert + do_clear_dmd + do_swap + do_trigger
+        byte_2 = '0000' + do_trig_out_prev + do_buf_swap + do_insert_black + do_invert_pat
+        # print('byte2:', byte_2)
 
-        payload = byte_0 + byte_1 + byte_2
+        payload = byte_2 + byte_1 + byte_0
+        # payload = byte_0 + byte_1 + byte_2
+        # payload *= 3
+        # print(payload)
         payload = bits_to_bytes(payload)
 
         self.command('w', 0x00, 0x1a, 0x34, payload)
@@ -291,58 +337,80 @@ class dlpc(object):
         Validates the pattern sequence
         :return:
         """
-        self.command('w', 0x00, 0x1a, 0x1a, bits_to_bytes(conv_len(0, 8)))
+        self.command('w', 0x00, 0x1a, 0x1a, bits_to_bytes(conv_len(0x00, 8)))
         print(bin(self.ans[0]))
+        print('validation:', bin(self.ans[6]))
 
 
 def pattern_mode():
     lcr = dlpc()
 
-    # 1: pattern display mode
-    lcr.change_mode(1)
-    time.sleep(0.1)
-
     # before proceeding to change params, need to stop pattern sequence mode
     lcr.stop_sequence()
-    time.sleep(0.1)
+
+    # 1: pattern display mode
+    lcr.change_mode(1)
+    # time.sleep(0.1)
 
     # 2: pattern display from external video
     lcr.sequence_input(0)
-    time.sleep(0.1)
+    # time.sleep(0.1)
 
     # 3: setup number of luts?
-    lcr.sequence_control(1, True, 2)
-    time.sleep(0.1)
+    lcr.dlpc350_set_pattern_config(num_lut_entries=3, to_repeat=True, num_pats_for_trig_out2=3)
+    # time.sleep(0.1)
 
     # 4: Pattern trigger mode selection
     lcr.sequence_trigger(0)
-    time.sleep(0.1)
+    # time.sleep(0.1)
 
     # 5: Set exposure and frame rate
-    lcr.sequence_exp_per(4500, 4500)
-    time.sleep(0.1)
+    lcr.dlpc350_set_exposure_frame_period(4500, 4500)
+    # time.sleep(0.1)
 
     # 6: Skip setting up image indexes
     pass
 
-    # 7: Set up LUT
-    # lcr.mailbox_setup(2)
-    lcr.pattern_setup(0b00, 0, 7, 0b111, False, False, False, False)
-    time.sleep(0.1)
-    # lcr.pattern_setup(0b00, 1, 7, 0b001, False, False, False, False)
-    time.sleep(0.1)
-    # lcr.pattern_setup(0b00, 2, 7, 0b001, False, False, False, False)
-    time.sleep(0.1)
-    # lcr.mailbox_setup(0)
-    time.sleep(0.1)
+    color = 0b0101
 
+    # 7: Set up LUT
+    lcr.dlpc350_open_mailbox(2)
+    lcr.dlpc350_mailbox_set_addr(0)
+    lcr.pattern_setup(trig_type=0b01,
+                      pat_num=0,
+                      bit_depth=7,
+                      led_select=color,
+                      do_invert_pat=False,
+                      do_insert_black=False,
+                      do_buf_swap=False,
+                      do_trig_out_prev=False)
+    lcr.dlpc350_mailbox_set_addr(1)
+    lcr.pattern_setup(trig_type=0b11,
+                      pat_num=1,
+                      bit_depth=7,
+                      led_select=color,
+                      do_invert_pat=False,
+                      do_insert_black=False,
+                      do_buf_swap=False,
+                      do_trig_out_prev=False)
+    lcr.dlpc350_mailbox_set_addr(2)
+    lcr.pattern_setup(trig_type=0b11,
+                      pat_num=2,
+                      bit_depth=7,
+                      led_select=color,
+                      do_invert_pat=False,
+                      do_insert_black=False,
+                      do_buf_swap=False,
+                      do_trig_out_prev=False)
+    lcr.dlpc350_open_mailbox(0)
+
+    # lcr.pattern_setup(0b00, 0, 7, 0b0111, False, False, False, False)
+    # lcr.pattern_setup(0b00, 0, 7, 0b0111, False, False, False, False)
     # 8/9: validate
     lcr.validate()
-    time.sleep(0.1)
 
     # 10: start sequence
     lcr.start_sequence()
-    time.sleep(0.1)
 
     lcr.release()
 
