@@ -70,7 +70,12 @@ class dlpc(object):
         """
         self.dlpc.reset()
 
-    def command(self, mode, sequence_byte, com1, com2, data=None):
+    def command(self,
+                mode,
+                sequence_byte,
+                com1,
+                com2,
+                data=None):
         """
         Sends a command to the dlpc
         :param mode: whether reading or writing
@@ -382,65 +387,56 @@ class dlpc(object):
         print('validation:', bin(self.ans[6]))
 
 
-def pattern_mode():
+def pattern_mode(input_mode='pattern',
+                 input_type='video',
+                 num_pats=3,
+                 trigger_type='vsync',
+                 period=4500,
+                 bit_depth=7,
+                 led_color=0b0101
+                 ):
     lcr = dlpc()
 
     # before proceeding to change params, need to stop pattern sequence mode
     lcr.stop_sequence()
 
     # 1: pattern display mode
-    lcr.change_mode('pattern')
+    lcr.change_mode(input_mode)
 
     # 2: pattern display from external video
-    lcr.sequence_input('video')
+    lcr.sequence_input(input_type)
 
     # 3: setup number of luts
-    lcr.dlpc350_set_pattern_config(num_lut_entries=3,
-                                   to_repeat=True,
-                                   num_pats_for_trig_out2=3)
+    lcr.dlpc350_set_pattern_config(num_lut_entries=num_pats,
+                                   num_pats_for_trig_out2=num_pats)
 
     # 4: Pattern trigger mode selection
-    lcr.sequence_trigger('vsync')
+    lcr.sequence_trigger(trigger_type)
 
     # 5: Set exposure and frame rate
-    lcr.dlpc350_set_exposure_frame_period(4500, 4500)
+    lcr.dlpc350_set_exposure_frame_period(period, period)
 
     # 6: Skip setting up image indexes
     pass
 
-    color = 0b0101
-
     # 7: Set up LUT
     lcr.dlpc350_open_mailbox(2)
-    lcr.dlpc350_mailbox_set_addr(0)
-    lcr.dlpc350_send_pat_lut(trig_type=0b01,
-                             pat_num=0,
-                             bit_depth=7,
-                             led_select=color,
-                             do_invert_pat=False,
-                             do_insert_black=False,
-                             do_buf_swap=False,
-                             do_trig_out_prev=False)
 
-    lcr.dlpc350_mailbox_set_addr(1)
-    lcr.dlpc350_send_pat_lut(trig_type=0b11,
-                             pat_num=1,
-                             bit_depth=7,
-                             led_select=color,
-                             do_invert_pat=False,
-                             do_insert_black=False,
-                             do_buf_swap=False,
-                             do_trig_out_prev=False)
+    for i in range(3):
+        if i == 0:
+            trig_type = 1
+        else:
+            trig_type = 2
 
-    lcr.dlpc350_mailbox_set_addr(2)
-    lcr.dlpc350_send_pat_lut(trig_type=0b11,
-                             pat_num=2,
-                             bit_depth=7,
-                             led_select=color,
-                             do_invert_pat=False,
-                             do_insert_black=False,
-                             do_buf_swap=False,
-                             do_trig_out_prev=False)
+        lcr.dlpc350_mailbox_set_addr(i)
+        lcr.dlpc350_send_pat_lut(trig_type=trig_type,
+                                 pat_num=i,
+                                 bit_depth=bit_depth,
+                                 led_select=led_color,
+                                 do_invert_pat=False,
+                                 do_insert_black=False,
+                                 do_buf_swap=False,
+                                 do_trig_out_prev=False)
 
     lcr.dlpc350_open_mailbox(0)
 
