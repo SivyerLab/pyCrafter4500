@@ -8,7 +8,7 @@ import time
 Adapted for lcr4500 from https://github.com/csi-dcsc/Pycrafter6500
 
 Docs: http://www.ti.com/lit/ug/dlpu010f/dlpu010f.pdf
-Doc strings adapted from dlpc450_api.cpp from source code
+Doc strings adapted from dlpc450_api.cpp source code
 """
 
 
@@ -150,55 +150,72 @@ class dlpc(object):
 
     def standby(self):
         """
-        Put the dmd into power down
+        Put the DMD into power down
         """
         self.command('w', 0x00, 0x02, 0x00, [1])
 
     def wakeup(self):
         """
-        Put the dmd into power down
+        Wake up the DMD.
         """
         self.command('w', 0x00, 0x02, 0x00, [0])
 
-    def change_mode(self, mode):
-        # 0 is video
-        # 1 is pattern
+    def change_mode(self, mode='pattern'):
+        """
+        Selects the input mode for the projector.
+        :param mode: 0 = video mode
+                     1 = pattern mode
+        """
+        modes = ['video', 'pattern']
+        if mode in modes:
+            mode = modes.index(mode)
+
         self.command('w', 0x00, 0x1a, 0x1b, [mode])
 
     def start_sequence(self):
         """
-        Starts a pattern sequence
+        Starts a pattern sequence.
         """
         self.command('w', 0x00, 0x1a, 0x24, [2])
 
     def pause_sequence(self):
         """
-        Starts a pattern sequence
+        Pauses a pattern sequence.
         """
         self.command('w', 0x00, 0x1a, 0x24, [1])
 
     def stop_sequence(self):
         """
-        Starts a pattern sequence
+        Stops a pattern sequence.
         """
         self.command('w', 0x00, 0x1a, 0x24, [0])
 
-    def sequence_input(self, mode=0):
+    def sequence_input(self, mode='video'):
         """
-        Selects the input type for pattern sequence
-        :param mode: 0 is video, 3 is flash
-        :return:
+        Selects the input type for pattern sequence.
+        :param mode: 0 = video
+                     3 = flash
         """
+        modes = ['video', '', '', 'flash']
+        if mode in modes:
+            mode = modes.index(mode)
+
         self.command('w', 0x00, 0x1a, 0x22, [mode])
 
-    def sequence_trigger(self, mode=0):
+    def sequence_trigger(self, mode='vsync'):
         """
-        Selects the trigger type for pattern sequence
-        :param mode: 0 is VSYNC
+        Selects the trigger type for pattern sequence.
+        :param mode: 0 = vsync
         """
+        modes = ['vsync']
+        if mode in modes:
+            mode = modes.index(mode)
+
         self.command('w', 0x00, 0x1a, 0x23, [mode])
 
-    def dlpc350_set_exposure_frame_period(self, exposure_period, frame_period):
+    def dlpc350_set_exposure_frame_period(self,
+                                          exposure_period,
+                                          frame_period):
         """
         The Pattern Display Exposure and Frame Period dictates the time a pattern is exposed and the frame period.
         Either the exposure time must be equivalent to the frame period, or the exposure time must be less than the
@@ -217,7 +234,11 @@ class dlpc(object):
 
         self.command('w', 0x00, 0x1a, 0x29, payload)
 
-    def dlpc350_set_pattern_config(self, num_lut_entries=1, to_repeat=True, num_pats_for_trig_out2=3, num_images=0):
+    def dlpc350_set_pattern_config(self,
+                                   num_lut_entries=3,
+                                   to_repeat=True,
+                                   num_pats_for_trig_out2=3,
+                                   num_images=0):
         """
         This API controls the execution of patterns stored in the lookup table. Before using this API, stop the current
         pattern sequence using DLPC350_PatternDisplay() API. After calling this API, send the Validation command using
@@ -265,7 +286,14 @@ class dlpc(object):
         mbox_num = bits_to_bytes(conv_len(mbox_num, 8))
         self.command('w', 0x00, 0x1a, 0x33, mbox_num)
 
-    def dlpc350_send_pat_lut(self, trig_type, pat_num, bit_depth, led_select, do_invert_pat, do_insert_black, do_buf_swap,
+    def dlpc350_send_pat_lut(self,
+                             trig_type,
+                             pat_num,
+                             bit_depth,
+                             led_select,
+                             do_invert_pat,
+                             do_insert_black,
+                             do_buf_swap,
                              do_trig_out_prev):
         """
         Mailbox content to setup pattern definition. See table 2-65 in programmer's guide for detailed description of
@@ -314,8 +342,8 @@ class dlpc(object):
                                         between the end of the previous pattern and the start of the current pattern.
                                         Exposure time is shared between all patterns defined under a common
                                         trigger out). This setting cannot be combined with the black-fill pattern
-                                 False = Trigger Out 1 has a rising edge at the start of a pattern, and a falling
-                                         edge at the end of the pattern
+                                 False = Trigger Out 1 has a rising edge at the start of a pattern, and a falling edge
+                                         at the end of the pattern
 
         """
         # byte 0
@@ -361,24 +389,21 @@ def pattern_mode():
     lcr.stop_sequence()
 
     # 1: pattern display mode
-    lcr.change_mode(1)
-    # time.sleep(0.1)
+    lcr.change_mode('pattern')
 
     # 2: pattern display from external video
-    lcr.sequence_input(0)
-    # time.sleep(0.1)
+    lcr.sequence_input('video')
 
-    # 3: setup number of luts?
-    lcr.dlpc350_set_pattern_config(num_lut_entries=3, to_repeat=True, num_pats_for_trig_out2=3)
-    # time.sleep(0.1)
+    # 3: setup number of luts
+    lcr.dlpc350_set_pattern_config(num_lut_entries=3,
+                                   to_repeat=True,
+                                   num_pats_for_trig_out2=3)
 
     # 4: Pattern trigger mode selection
-    lcr.sequence_trigger(0)
-    # time.sleep(0.1)
+    lcr.sequence_trigger('vsync')
 
     # 5: Set exposure and frame rate
     lcr.dlpc350_set_exposure_frame_period(4500, 4500)
-    # time.sleep(0.1)
 
     # 6: Skip setting up image indexes
     pass
@@ -396,6 +421,7 @@ def pattern_mode():
                              do_insert_black=False,
                              do_buf_swap=False,
                              do_trig_out_prev=False)
+
     lcr.dlpc350_mailbox_set_addr(1)
     lcr.dlpc350_send_pat_lut(trig_type=0b11,
                              pat_num=1,
@@ -405,6 +431,7 @@ def pattern_mode():
                              do_insert_black=False,
                              do_buf_swap=False,
                              do_trig_out_prev=False)
+
     lcr.dlpc350_mailbox_set_addr(2)
     lcr.dlpc350_send_pat_lut(trig_type=0b11,
                              pat_num=2,
@@ -414,6 +441,7 @@ def pattern_mode():
                              do_insert_black=False,
                              do_buf_swap=False,
                              do_trig_out_prev=False)
+
     lcr.dlpc350_open_mailbox(0)
 
     # 8/9: validate
