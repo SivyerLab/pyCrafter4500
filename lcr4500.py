@@ -296,10 +296,10 @@ class dlpc(object):
                              pat_num,
                              bit_depth,
                              led_select,
-                             do_invert_pat,
-                             do_insert_black,
-                             do_buf_swap,
-                             do_trig_out_prev):
+                             do_invert_pat=False,
+                             do_insert_black=False,
+                             do_buf_swap=False,
+                             do_trig_out_prev=False):
         """
         Mailbox content to setup pattern definition. See table 2-65 in programmer's guide for detailed description of
         pattern LUT entries.
@@ -393,7 +393,7 @@ def pattern_mode(input_mode='pattern',
                  trigger_type='vsync',
                  period=4500,
                  bit_depth=7,
-                 led_color=0b0101):
+                 led_color=0b101):
 
     assert bit_depth in [1, 2, 4, 7, 8]
 
@@ -440,11 +440,7 @@ def pattern_mode(input_mode='pattern',
         lcr.dlpc350_send_pat_lut(trig_type=trig_type,
                                  pat_num=bit_map[bit_depth][i],
                                  bit_depth=bit_depth,
-                                 led_select=led_color,
-                                 do_invert_pat=False,
-                                 do_insert_black=False,
-                                 do_buf_swap=False,
-                                 do_trig_out_prev=False)
+                                 led_select=led_color)
 
     lcr.dlpc350_open_mailbox(0)
 
@@ -457,4 +453,12 @@ def pattern_mode(input_mode='pattern',
     lcr.release()
 
 
-
+if __name__ == '__main__':
+    pattern_mode(input_mode='pattern',
+                 input_type='video',
+                 num_pats=3,
+                 trigger_type='vsync',
+                 period=4500,  # round() 222 hz in us
+                 bit_depth=7,
+                 led_color=0b010  # BGR
+                 )
