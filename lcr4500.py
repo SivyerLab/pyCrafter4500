@@ -393,8 +393,10 @@ def pattern_mode(input_mode='pattern',
                  trigger_type='vsync',
                  period=4500,
                  bit_depth=7,
-                 led_color=0b0101
-                 ):
+                 led_color=0b0101):
+
+    assert bit_depth in [1, 2, 4, 7, 8]
+
     lcr = dlpc()
 
     # before proceeding to change params, need to stop pattern sequence mode
@@ -422,6 +424,12 @@ def pattern_mode(input_mode='pattern',
     # 7: Set up LUT
     lcr.dlpc350_open_mailbox(2)
 
+    bit_map = {1: [7, 15, 23],
+               2: [3, 7, 11],
+               4: [1, 3, 5],
+               7: [0, 1, 2],
+               8: [0, 1, 2]}
+
     for i in range(3):
         if i == 0:
             trig_type = 1
@@ -430,7 +438,7 @@ def pattern_mode(input_mode='pattern',
 
         lcr.dlpc350_mailbox_set_addr(i)
         lcr.dlpc350_send_pat_lut(trig_type=trig_type,
-                                 pat_num=i,
+                                 pat_num=bit_map[bit_depth][i],
                                  bit_depth=bit_depth,
                                  led_select=led_color,
                                  do_invert_pat=False,
