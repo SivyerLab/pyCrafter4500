@@ -3,12 +3,16 @@ import usb.util
 import time
 import numpy as np
 import time
+from math import floor
 
 """
 Adapted for lcr4500 from https://github.com/csi-dcsc/Pycrafter6500
 
 Docs: http://www.ti.com/lit/ug/dlpu010f/dlpu010f.pdf
 Doc strings adapted from dlpc450_api.cpp source code
+
+To connect to LCR4500, install libusb-win32 driver. Recommended way to do is this is
+with Zadig utility (http://zadig.akeo.ie/)
 """
 
 
@@ -46,6 +50,15 @@ def bits_to_bytes(a, reverse=True):
     if reverse:
         bytelist.reverse()
     return bytelist
+
+
+def fps_to_period(fps):
+    """
+    Calculates desired period (us) from given fps
+    :param fps: frames per second
+    """
+    period = floor(1.0 / fps * 10**6)
+    return period
 
 
 class dlpc(object):
@@ -450,6 +463,16 @@ def pattern_mode(input_mode='pattern',
     # 10: start sequence
     lcr.start_sequence()
 
+    lcr.release()
+
+
+def video_mode():
+    """
+    Puts LCR4500 into video mode.
+    """
+    lcr = dlpc()
+    lcr.stop_sequence()
+    lcr.change_mode('video')
     lcr.release()
 
 
