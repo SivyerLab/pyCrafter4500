@@ -2,10 +2,10 @@ from __future__ import print_function
 
 import usb.core
 import usb.util
-import time
-import numpy as np
+from  usb.core import USBError
 import time
 from math import floor
+from contextlib import contextmanager
 
 """
 Adapted for lcr4500 from https://github.com/csi-dcsc/Pycrafter6500
@@ -25,6 +25,7 @@ def conv_len(a, l):
     :param l: length of bit string
     :return: padded bit string
     """
+    # print(a, l)
     b = bin(a)[2:]
     padding = l - len(b)
     b = '0' * padding + b
@@ -59,8 +60,26 @@ def fps_to_period(fps):
     Calculates desired period (us) from given fps
     :param fps: frames per second
     """
-    period = floor(1.0 / fps * 10**6)
+    period = int(floor(1.0 / fps * 10**6))
     return period
+
+
+@contextmanager
+def connect_usb():
+    """
+    Context manager for connecting to and releasing usb device
+    :yields: usb device
+    """
+    device = usb.core.find(idVendor=0x0451, idProduct=0x6401)
+    device.set_configuration()
+
+    lcr = dlpc350(device)
+
+    yield lcr
+
+    device.reset()
+    del lcr
+    del device
 
 
 class dlpc350(object):
@@ -69,21 +88,13 @@ class dlpc350(object):
     Can connect to different DLPCs by changing product ID. Check IDs in
     device manager.
     """
-    def __init__(self):
+    def __init__(self, device):
         """
-        Sets up USB connection
-        """
-        self.dlpc = usb.core.find(idVendor=0x0451, idProduct=0x6401)
-        self.dlpc.set_configuration()
+        connects device
 
-        # holds answers from dlpc
-        self.ans = []
-
-    def release(self):
+        :param device: lcr4500 usb device
         """
-        Release USB device
-        """
-        self.dlpc.reset()
+        self.dlpc = device
 
     def command(self,
                 mode,
@@ -157,10 +168,16 @@ class dlpc350(object):
                 self.dlpc.write(1, buffer)
 
         # wait a bit between commands
-        time.sleep(0.02)
+        # time.sleep(0.02)
+        # time.sleep(0.02)
 
         # done writing, read feedback from dlpc
-        self.ans = self.dlpc.read(0x81, 64)
+        try:
+            self.ans = self.dlpc.read(0x81, 64)
+        except USBError as e:
+            print('USB Error:', e)
+
+        time.sleep(0.02)
 
     def read_reply(self):
         """
@@ -372,7 +389,7 @@ class dlpc350(object):
                            7 = White (Red + Blue + Green)
         :param do_invert_pat: True = Invert pattern
                               False = do not invert pattern
-        :param do_insert_black: True = Insert black-fill pattern after current pattern. This setting requires 230 μs
+        :param do_insert_black: True = Insert black-fill pattern after current pattern. This setting requires 230 us
                                        of time before the start of the next pattern
                                 False = do not insert any post pattern
         :param do_buf_swap: True = perform a buffer swap
@@ -417,72 +434,86 @@ def pattern_mode(input_mode='pattern',
                  trigger_type='vsync',
                  period=fps_to_period(222),
                  bit_depth=7,
-                 led_color=0b111  # BGR
+                 led_color=0b111,  # BGR
+                 **kwargs
                  ):
 
-    assert bit_depth in [1, 2, 4, 7, 8]
+    if 'fps' in kwargs:
+        period = fps_to_period(kwargs['fps'])
 
-    lcr = dlpc350()
+    with connect_usb() as lcr:
+        assert bit_depth in [1, 2, 4, 7, 8]
 
-    # before proceeding to change params, need to stop pattern sequence mode
-    lcr.pattern_display('stop')
+        # before proceeding to change params, need to stop pattern sequence mode
+        lcr.pattern_display('stop')
 
-    # 1: pattern display mode
-    lcr.set_display_mode(input_mode)
+        # 1: pattern display mode
+        lcr.set_display_mode(input_mode)
 
-    # 2: pattern display from external video
-    lcr.set_pattern_input_source(input_type)
+        # 2: pattern display from external video
+        lcr.set_pattern_input_source(input_type)
 
-    # 3: setup number of luts
-    lcr.set_pattern_config(num_lut_entries=num_pats,
-                           num_pats_for_trig_out2=num_pats)
+        # 3: setup number of luts
+        lcr.set_pattern_config(num_lut_entries=num_pats,
+                               num_pats_for_trig_out2=num_pats)
 
-    # 4: Pattern trigger mode selection
-    lcr.set_pattern_trigger_mode(trigger_type)
+        # 4: Pattern trigger mode selection
+        lcr.set_pattern_trigger_mode(trigger_type)
 
-    # 5: Set exposure and frame rate
-    lcr.set_exposure_frame_period(period, period)
+        # 5: Set exposure and frame rate
+        lcr.set_exposure_frame_period(period, period)
 
-    # 6: Skip setting up image indexes
-    pass
+        # 6: Skip setting up image indexes
+        pass
 
-    # 7: Set up LUT
-    lcr.open_mailbox(2)
+        # 7: Set up LUT
+        lcr.open_mailbox(2)
 
-    bit_map = {1: [7, 15, 23],
-               2: [3, 7, 11],
-               4: [1, 3, 5],
-               7: [0, 1, 2],
-               8: [0, 1, 2]}
+        bit_map = {1: [7, 15, 23],
+                   2: [3, 7, 11],
+                   4: [1, 3, 5],
+                   7: [0, 1, 2],
+                   8: [0, 1, 2]}
 
-    for i in range(3):
-        if i == 0:
-            trig_type = 1
-        else:
-            trig_type = 3
+        for i in range(3):
+            if i == 0:
+                trig_type = 1
+            else:
+                trig_type = 3
 
-        lcr.mailbox_set_address(i)
-        lcr.send_pattern_lut(trig_type=trig_type,
-                             pat_num=bit_map[bit_depth][i],
-                             bit_depth=bit_depth,
-                             led_select=led_color)
+            lcr.mailbox_set_address(i)
+            lcr.send_pattern_lut(trig_type=trig_type,
+                                 pat_num=bit_map[bit_depth][i],
+                                 bit_depth=bit_depth,
+                                 led_select=led_color)
 
-    lcr.open_mailbox(0)
+        lcr.open_mailbox(0)
 
-    # 8/9: validate
-    lcr.start_pattern_lut_validate()
+        # 8/9: validate
+        lcr.start_pattern_lut_validate()
 
-    # 10: start sequence
-    lcr.pattern_display('start')
-
-    lcr.release()
+        # 10: start sequence
+        lcr.pattern_display('start')
+        # idk why you need a second start coming out of video mode
+        lcr.pattern_display('start')
 
 
 def video_mode():
     """
     Puts LCR4500 into video mode.
     """
-    lcr = dlpc350()
-    lcr.pattern_display('stop')
-    lcr.set_display_mode('video')
-    lcr.release()
+    # lcr = dlpc350()
+    with connect_usb() as lcr:
+        lcr.pattern_display('stop')
+        lcr.set_display_mode('video')
+
+
+def power_down():
+    with connect_usb() as lcr:
+        lcr.pattern_display('stop')
+        lcr.set_power_mode(do_standby=True)
+
+
+def power_up():
+    with connect_usb() as lcr:
+        lcr.set_power_mode(do_standby=False)
