@@ -23,6 +23,7 @@ with Zadig utility (http://zadig.akeo.ie/)
 def conv_len(a, l):
     """
     Function that converts a number into a bit string of given length
+
     :param a: number to convert
     :param l: length of bit string
     :return: padded bit string
@@ -37,6 +38,7 @@ def conv_len(a, l):
 def bits_to_bytes(a, reverse=True):
     """
     Function that converts bit string into a given number of bytes
+
     :param a: bites to convert
     :param reverse: whether or not to reverse the byte list
     :return: list of bytes
@@ -504,18 +506,23 @@ def video_mode():
     """
     Puts LCR4500 into video mode.
     """
-    # lcr = dlpc350()
     with connect_usb() as lcr:
         lcr.pattern_display('stop')
         lcr.set_display_mode('video')
 
 
 def power_down():
+    """
+    Puts LCR4500 into standby mode.
+    """
     with connect_usb() as lcr:
         lcr.pattern_display('stop')
         lcr.set_power_mode(do_standby=True)
 
 
 def power_up():
+    """
+    Wakes LCR4500 up from standby mode.
+    """
     with connect_usb() as lcr:
         lcr.set_power_mode(do_standby=False)

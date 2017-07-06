@@ -1,14 +1,16 @@
 # pycrafter4500
 
-Adapted for the TI Lightcrafter 4500 from https://github.com/csi-dcsc/Pycrafter6500
+This is an unofficial API for some functionality of the Texas Instruments Lightcrafter 4500.
 
-DLPC 350 is the controller chip on the LCR 4500.
+Code adapted for the TI Lightcrafter 4500 from https://github.com/csi-dcsc/Pycrafter6500
 
-TI doc: http://www.ti.com/lit/ug/dlpu010f/dlpu010f.pdf
+The DLPC 350 is the controller chip on the LCR 4500.
+
+TI DLPC 650 documentation can be found at: http://www.ti.com/lit/ug/dlpu010f/dlpu010f.pdf
 
 Doc strings adapted from dlpc350_api.cpp source code.
 
-To connect to LCR4500, install libusb-win32 driver. Recommended way to do is this is
+To connect to the LCR4500, the libusb-win32 driver is required. The recommended way to do is this is
 with [Zadig](http://zadig.akeo.ie/). The pyusb package is also required.
 
 
@@ -27,10 +29,10 @@ pip install pycrafter4500
 import pycrafter4500
 ```
 
-Waking up from and going into standbye:
+Waking up from and going into standby:
 
 ```python
-pycrafter4500.power_on()
+pycrafter4500.power_up()
 pycrafter4500.power_down()
 ```
 
