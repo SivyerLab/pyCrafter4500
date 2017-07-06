@@ -10,8 +10,10 @@ from contextlib import contextmanager
 """
 Adapted for lcr4500 from https://github.com/csi-dcsc/Pycrafter6500
 
+DLPC350 is the controller chip on the LCR4500.
+
 Docs: http://www.ti.com/lit/ug/dlpu010f/dlpu010f.pdf
-Doc strings adapted from dlpc450_api.cpp source code
+Doc strings adapted from dlpc350_api.cpp source code.
 
 To connect to LCR4500, install libusb-win32 driver. Recommended way to do is this is
 with Zadig utility (http://zadig.akeo.ie/)
