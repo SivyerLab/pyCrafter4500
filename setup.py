@@ -9,7 +9,7 @@ setup(
     author_email = 'tomlinsa@ohsu.eud',
     url = 'https://github.com/SivyerLab/pyCrafter4500',
     download_url = 'https://github.com/SivyerLab/pyCrafter4500/archive/0.1.tar.gz',
-    keywords = ['lightcrafter', '4500', 'dlpc', '350', 'projector', 'texas'],
+    keywords = 'lightcrafter 4500 dlpc 350 projector texas',
     install_requires=[
         'pyusb'
     ],
