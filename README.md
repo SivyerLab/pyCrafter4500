@@ -6,7 +6,7 @@ Code adapted for the TI Lightcrafter 4500 from https://github.com/csi-dcsc/Pycra
 
 The DLPC 350 is the controller chip on the LCR 4500.
 
-TI DLPC 650 documentation can be found at: http://www.ti.com/lit/ug/dlpu010f/dlpu010f.pdf
+TI DLPC 350 documentation can be found at: http://www.ti.com/lit/ug/dlpu010f/dlpu010f.pdf
 
 Doc strings adapted from dlpc350_api.cpp source code.
 
