@@ -19,6 +19,10 @@ To connect to LCR4500, install libusb-win32 driver. Recommended way to do is thi
 with Zadig utility (http://zadig.akeo.ie/)
 """
 
+__author__  = 'Alexander Tomlinson'
+__email__   = 'mexander@gmail.com'
+__version__ = '0.5'
+
 
 def conv_len(a, l):
     """
