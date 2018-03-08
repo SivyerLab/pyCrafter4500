@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import usb.core
 import usb.util
-from  usb.core import USBError
+from usb.core import USBError
 import time
 from math import floor
 from contextlib import contextmanager
