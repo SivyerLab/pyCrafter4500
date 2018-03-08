@@ -32,7 +32,6 @@ def conv_len(a, l):
     :param l: length of bit string
     :return: padded bit string
     """
-    # print(a, l)
     b = bin(a)[2:]
     padding = l - len(b)
     b = '0' * padding + b
@@ -118,11 +117,6 @@ class dlpc350(object):
         :param com2: command 3
         :param data: data to pass with command
         """
-        # print(hex(com1), hex(com2), end=': ')
-        # for i in reversed(data):
-        #     print(hex(i), end=' ')
-        # print()
-        # return
 
         buffer = []
 
@@ -215,8 +209,6 @@ class dlpc350(object):
         (USB: CMD2: 0x1A, CMD3: 0x1A)
         """
         self.command('w', 0x00, 0x1a, 0x1a, bits_to_bytes(conv_len(0x00, 8)))
-        # print(bin(self.ans[0]))
-        # print('validation:', bin(self.ans[6]))
 
     def set_display_mode(self, mode='pattern'):
         """
