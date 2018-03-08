@@ -1,11 +1,12 @@
 from __future__ import print_function
 
+import time
+from contextlib import contextmanager
+from math import floor
+
 import usb.core
 import usb.util
 from usb.core import USBError
-import time
-from math import floor
-from contextlib import contextmanager
 
 """
 Adapted for lcr4500 from https://github.com/csi-dcsc/Pycrafter6500
