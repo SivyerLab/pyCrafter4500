@@ -1,3 +1,5 @@
+![version] ![downloads]
+
 # pycrafter4500
 
 This is an unofficial API for some functionality of the Texas Instruments Lightcrafter 4500.
@@ -62,3 +64,6 @@ from pycrafter4500 import bits_to_bytes, conv_len
 with connect_usb() as lcr:
     lcr.command('w', 0x00, CMD2, CMD3, payload)
 ```
+
+  [version]: https://img.shields.io/pypi/v/pycrafter4500.svg
+  [downloads]: https://img.shields.io/pypi/dm/pycrafter4500.svg
