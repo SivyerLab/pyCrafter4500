@@ -1,4 +1,4 @@
-![version_badge] ![downloads_badge] ![license_badge]
+![version_badge] ![downloads_badge] ![license_badge] ![docs_badge]
 
 # pycrafter4500
 
@@ -68,3 +68,4 @@ with connect_usb() as lcr:
   [version_badge]: https://img.shields.io/pypi/v/pycrafter4500.svg
   [downloads_badge]: https://img.shields.io/pypi/dm/pycrafter4500.svg
   [license_badge]: https://img.shields.io/github/license/SivyerLab/pyCrafter4500.svg
+  [docs_badge]: https://readthedocs.org/projects/pycrafter4500/badge/
