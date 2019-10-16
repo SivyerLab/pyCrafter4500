@@ -27,11 +27,12 @@ __version__ = '0.5'
 
 def conv_len(a, l):
     """
-    Function that converts a number into a bit string of given length
+    Function that converts a number into a bit string of given length.
 
-    :param a: number to convert
-    :param l: length of bit string
-    :return: padded bit string
+    :param int a: Number to convert.
+    :param int l: Length of bit string.
+
+    :return: Padded bit string.
     """
     b = bin(a)[2:]
     padding = l - len(b)
@@ -41,11 +42,12 @@ def conv_len(a, l):
 
 def bits_to_bytes(a, reverse=True):
     """
-    Function that converts bit string into a given number of bytes
+    Function that converts bit string into a given number of bytes.
 
-    :param a: bites to convert
-    :param reverse: whether or not to reverse the byte list
-    :return: list of bytes
+    :param str a: Bytes to convert.
+    :param bool reverse: Whether or not to reverse the byte list.
+
+    :return: List of bytes.
     """
     bytelist = []
 
@@ -65,8 +67,11 @@ def bits_to_bytes(a, reverse=True):
 
 def fps_to_period(fps):
     """
-    Calculates desired period (us) from given fps
-    :param fps: frames per second
+    Calculates desired period (us) from given fps.
+
+    :param int fps: Frames per second.
+
+    :return: Period (us).
     """
     period = int(floor(1.0 / fps * 10**6))
     return period
@@ -75,8 +80,9 @@ def fps_to_period(fps):
 @contextmanager
 def connect_usb():
     """
-    Context manager for connecting to and releasing usb device
-    :yields: usb device
+    Context manager for connecting to and releasing usb device.
+
+    :yields: USB device.
     """
     device = usb.core.find(idVendor=0x0451, idProduct=0x6401)
     device.set_configuration()
@@ -92,15 +98,14 @@ def connect_usb():
 
 class dlpc350(object):
     """
-    Class representing dmd controller.
-    Can connect to different DLPCs by changing product ID. Check IDs in
+    Class representing dmd controller. Can connect to different DLPCs by changing product ID. Check IDs in
     device manager.
     """
     def __init__(self, device):
         """
-        connects device
+        Connects the device.
 
-        :param device: lcr4500 usb device
+        :param device: lcr4500 USB device.
         """
         self.dlpc = device
 
@@ -111,12 +116,13 @@ class dlpc350(object):
                 com2,
                 data=None):
         """
-        Sends a command to the dlpc
-        :param mode: whether reading or writing
-        :param sequence_byte:
-        :param com1: command 1
-        :param com2: command 3
-        :param data: data to pass with command
+        Sends a command to the dlpc.
+
+        :param str mode: Whether reading or writing.
+        :param int sequence_byte:
+        :param int com1: Command 1
+        :param int com2: Command 3
+        :param list data: Data to pass with command.
         """
 
         buffer = []
@@ -184,7 +190,7 @@ class dlpc350(object):
 
     def read_reply(self):
         """
-        Reads in reply
+        Reads in reply.
         """
         for i in self.ans:
             print(hex(i))
@@ -194,10 +200,12 @@ class dlpc350(object):
         The Power Control places the DLPC350 in a low-power state and powers down the DMD interface. Standby mode should
         only be enabled after all data for the last frame to be displayed has been transferred to the DLPC350. Standby
         mode must be disabled prior to sending any new data.
+
         (USB: CMD2: 0x02, CMD3: 0x00)
 
-        :param do_standby: True = Standby mode. Places DLPC350 in low power state and powers down the DMD interface
-                           False = Normal operation. The selected external source will be displayed
+        :param bool do_standby:
+            :True: Standby mode. Places DLPC350 in low power state and powers down the DMD interface.
+            :False: Normal operation. The selected external source will be displayed.
         """
         do_standby = int(do_standby)
         self.command('w', 0x00, 0x02, 0x00, [do_standby])
@@ -214,10 +222,12 @@ class dlpc350(object):
     def set_display_mode(self, mode='pattern'):
         """
         Selects the input mode for the projector.
+
         (USB: CMD2: 0x1A, CMD3: 0x1B)
 
-        :param mode: 0 = video mode
-                     1 = pattern mode
+        :param int mode:
+            :0: "video" mode
+            :1: "pattern" mode
         """
         modes = ['video', 'pattern']
         if mode in modes:
@@ -228,10 +238,12 @@ class dlpc350(object):
     def set_pattern_input_source(self, mode='video'):
         """
         Selects the input type for pattern sequence.
+
         (USB: CMD2: 0x1A, CMD3: 0x22)
 
-        :param mode: 0 = video
-                     3 = flash
+        :param int mode:
+            :0: "video"
+            :3: "flash"
         """
         modes = ['video', '', '', 'flash']
         if mode in modes:
@@ -242,9 +254,11 @@ class dlpc350(object):
     def set_pattern_trigger_mode(self, mode='vsync'):
         """
         Selects the trigger type for pattern sequence.
+
         (USB: CMD2: 0x1A, CMD3: 0x23)
 
-        :param mode: 0 = vsync
+        :param int mode:
+            :0: "vsync"
         """
         modes = ['vsync']
         if mode in modes:
@@ -255,14 +269,16 @@ class dlpc350(object):
     def pattern_display(self, action='start'):
         """
         This API starts or stops the programmed patterns sequence.
+
         (USB: CMD2: 0x1A, CMD3: 0x24)
 
-        :param action: Pattern Display Start/Stop Pattern Sequence
-                       0 = Stop Pattern Display Sequence. The next "Start" command will restart the pattern sequence
-                           from the beginning.
-                       1 = Pause Pattern Display Sequence. The next "Start" command will start the pattern sequence by
-                           re-displaying the current pattern in the sequence.
-                       2 = Start Pattern Display Sequence
+        :param int action: Pattern Display Start/Stop Pattern Sequence
+
+            :0: Stop Pattern Display Sequence. The next "Start" command will restart the pattern sequence from the
+               beginning.
+            :1: Pause Pattern Display Sequence. The next "Start" command will start the pattern sequence by
+               re-displaying the current pattern in the sequence.
+            :2: Start Pattern Display Sequence.
         """
         actions = ['stop', 'pause', 'start']
         if action in actions:
@@ -277,11 +293,12 @@ class dlpc350(object):
         The Pattern Display Exposure and Frame Period dictates the time a pattern is exposed and the frame period.
         Either the exposure time must be equivalent to the frame period, or the exposure time must be less than the
         frame period by 230 microseconds. Before executing this command, stop the current pattern sequence. After
-        executing this command, call DLPC350_ValidatePatLutData() API before starting the pattern sequence.
+        executing this command, call ``DLPC350_ValidatePatLutData()`` API before starting the pattern sequence.
+
         (USB: CMD2: 0x1A, CMD3: 0x29)
 
-        :param exposure_period: exposure time in microseconds (4 bytes)
-        :param frame_period: frame period in microseconds (4 bytes)
+        :param int exposure_period: Exposure time in microseconds (4 bytes).
+        :param int frame_period: Frame period in microseconds (4 bytes).
         """
         exposure_period = conv_len(exposure_period, 32)
         frame_period = conv_len(frame_period, 32)
@@ -298,16 +315,22 @@ class dlpc350(object):
                            num_images=0):
         """
         This API controls the execution of patterns stored in the lookup table. Before using this API, stop the current
-        pattern sequence using DLPC350_PatternDisplay() API. After calling this API, send the Validation command using
-        the API DLPC350_ValidatePatLutData() before starting the pattern sequence.
+        pattern sequence using ``DLPC350_PatternDisplay()`` API. After calling this API, send the Validation command
+        using the API DLPC350_ValidatePatLutData() before starting the pattern sequence.
+
         (USB: CMD2: 0x1A, CMD3: 0x31)
 
-        :param num_lut_entries: number of LUT entries
-        :param do_repeat: True = execute the pattern sequence once; False = repeat the pattern sequence
-        :param num_pats_for_trig_out2: Number of patterns to display(range 1 through 256). If in repeat mode, then this
-            value dictates how often TRIG_OUT_2 is generated
-        :param num_images: Number of Image Index LUT Entries(range 1 through 64). This Field is irrelevant for Pattern
-            Display Data Input Source set to a value other than internal
+        :param int num_lut_entries: Number of LUT entries.
+        :param bool do_repeat:
+
+            :True: Execute the pattern sequence once.
+            :False: Repeat the pattern sequence.
+
+        :param int num_pats_for_trig_out2: Number of patterns to display(range 1 through 256). If in repeat mode, then
+           this value dictates how often TRIG_OUT_2 is generated.
+
+        :param int num_images: Number of Image Index LUT Entries(range 1 through 64). This Field is irrelevant for Pattern
+            Display Data Input Source set to a value other than internal.
         """
         num_lut_entries = '0' + conv_len(num_lut_entries - 1, 7)
         do_repeat = '0000000' + str(int(do_repeat))
@@ -322,9 +345,10 @@ class dlpc350(object):
     def mailbox_set_address(self, address=0):
         """
         This API defines the offset location within the DLPC350 mailboxes to write data into or to read data from.
+
         (USB: CMD2: 0x1A, CMD3: 0x32)
 
-        :param address: Defines the offset within the selected (opened) LUT to write/read data to/from (0-127)
+        :param int address: Defines the offset within the selected (opened) LUT to write/read data to/from (0-127).
         """
         address = bits_to_bytes(conv_len(address, 8))
         self.command('w', 0x00, 0x1a, 0x32, address)
@@ -333,12 +357,14 @@ class dlpc350(object):
         """
         This API opens the specified Mailbox within the DLPC350 controller. This API must be called before sending data
         to the mailbox/LUT using DLPC350_SendPatLut() or DLPC350_SendImageLut() APIs.
+
         (USB: CMD2: 0x1A, CMD3: 0x33)
 
-        :param mbox_num: 0 = Disable (close) the mailboxes
-                         1 = Open the mailbox for image index configuration
-                         2 = Open the mailbox for pattern definition
-                         3 = Open the mailbox for the Variable Exposure
+        :param mbox_num:
+            :0: Disable (close) the mailboxes.
+            :1: Open the mailbox for image index configuration.
+            :2: Open the mailbox for pattern definition.
+            :3: Open the mailbox for the Variable Exposure.
         """
         mbox_num = bits_to_bytes(conv_len(mbox_num, 8))
         self.command('w', 0x00, 0x1a, 0x33, mbox_num)
@@ -355,52 +381,65 @@ class dlpc350(object):
         """
         Mailbox content to setup pattern definition. See table 2-65 in programmer's guide for detailed description of
         pattern LUT entries.
+
         (USB: CMD2: 0x1A, CMD3: 0x34)
 
-        :param trig_type: Select the trigger type for the pattern
-                          0 = Internal trigger
-                          1 = External positive
-                          2 = External negative
-                          3 = No Input Trigger (Continue from previous; Pattern still has full exposure time)
-                          0x3FF = Full Red Foreground color intensity
-        :param pat_num: Pattern number (0 based index). For pattern number 0x3F, there is no pattern display. The
+        :param int trig_type: Select the trigger type for the pattern
+
+            :0: Internal trigger.
+            :1: External positive.
+            :2: External negative.
+            :3: No Input Trigger (Continue from previous; Pattern still has full exposure time).
+            :0x3FF: Full Red Foreground color intensity
+
+        :param int pat_num: Pattern number (0 based index). For pattern number ``0x3F``, there is no pattern display. The
             maximum number supported is 24 for 1 bit-depth patterns. Setting the pattern number to be 25, with a
             bit-depth of 1 will insert a white-fill pattern. Inverting this pattern will insert a black-fill pattern.
             These patterns will have the same exposure time as defined in the Pattern Display Exposure and Frame Period
             command. Table 2-66 in the programmer's guide illustrates which bit planes are illuminated by each pattern
             number.
+
         :param bit_depth: Select desired bit-depth
-                          0 = Reserved
-                          1 = 1-bit
-                          2 = 2-bit
-                          3 = 3-bit
-                          4 = 4-bit
-                          5 = 5-bit
-                          6 = 6-bit
-                          7 = 7-bit
-                          8 = 8-bit
-        :param led_select: Choose the LEDs that are on: b0 = Red, b1 = Green, b2 = Blue
-                           0 = No LED (Pass Through)
-                           1 = Red
-                           2 = Green
-                           3 = Yellow (Green + Red)
-                           4 = Blue
-                           5 = Magenta (Blue + Red)
-                           6 = Cyan (Blue + Green)
-                           7 = White (Red + Blue + Green)
-        :param do_invert_pat: True = Invert pattern
-                              False = do not invert pattern
-        :param do_insert_black: True = Insert black-fill pattern after current pattern. This setting requires 230 us
-                                       of time before the start of the next pattern
-                                False = do not insert any post pattern
-        :param do_buf_swap: True = perform a buffer swap
-                            False = do not perform a buffer swap
-        :param do_trig_out_prev: True = Trigger Out 1 will continue to be high. There will be no falling edge
-                                        between the end of the previous pattern and the start of the current pattern.
-                                        Exposure time is shared between all patterns defined under a common
-                                        trigger out). This setting cannot be combined with the black-fill pattern
-                                 False = Trigger Out 1 has a rising edge at the start of a pattern, and a falling edge
-                                         at the end of the pattern
+
+            :0: Reserved
+            :1: 1-bit
+            :2: 2-bit
+            :3: 3-bit
+            :4: 4-bit
+            :5: 5-bit
+            :6: 6-bit
+            :7: 7-bit
+            :8: 8-bit
+
+        :param int led_select: Choose the LEDs that are on (bit flags b0 = Red, b1 = Green, b2 = Blue)
+
+            :0: 0b000 No LED (Pass through)
+            :1: 0b001 Red
+            :2: 0b010 Green
+            :3: 0b011 Yellow (Green + Red)
+            :4: 0b100 Blue
+            :5: 0b101 Magenta (Blue + Red)
+            :6: 0b110 Cyan (Blue + Green)
+
+        :param bool do_invert_pat:
+            :True: Invert pattern.
+            :False: Do not invert pattern.
+
+        :param bool do_insert_black:
+            :True: Insert black-fill pattern after current pattern. This setting requires 230 us of time before the
+               start of the next pattern.
+            :False: Do not insert any post pattern.
+
+        :param bool do_buf_swap:
+            :True: perform a buffer swap.
+            :False: Do not perform a buffer swap.
+
+        :param do_trig_out_prev:
+            :True: Trigger Out 1 will continue to be high. There will be no falling edge between the end of the
+               previous pattern and the start of the current pattern. Exposure time is shared between all patterns
+               defined under a common trigger out). This setting cannot be combined with the black-fill pattern.
+            :False: Trigger Out 1 has a rising edge at the start of a pattern, and a falling edge at the end of the
+               pattern.
 
         """
         # byte 0
@@ -438,6 +477,17 @@ def pattern_mode(input_mode='pattern',
                  led_color=0b111,  # BGR
                  **kwargs
                  ):
+    """
+    Helper function to setup a video pattern mode.
+
+    :param str input_mode: See :meth:`pycrafter4500.set_display_mode`
+    :param str input_type: See :meth:`pycrafter4500.set_pattern_input_source`
+    :param int num_pats: See :meth:`pycrafter4500.set_pattern_config`
+    :param str trigger_type: See :meth:`pycrafter4500.set_pattern_trigger_mode`
+    :param int period: See :meth:`pycrafter4500.set_exposure_frame_period`
+    :param int bit_depth: See :meth:`pycrafter4500.send_pattern_lut`
+    :param int led_color: See :meth:`pycrafter4500.send_pattern_lut`
+    """
 
     if 'fps' in kwargs:
         period = fps_to_period(kwargs['fps'])
