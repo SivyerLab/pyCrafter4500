@@ -205,7 +205,7 @@ class dlpc350(object):
         if pretty_print:
             # ans = str(bin(self.ans[4]))[2:]
             ans = format(self.ans[4], '08b')
-            print(f'DMD micromirrors are {"parked" if int(ans[-1]) else "not parked"}')
+            print(f'\nDMD micromirrors are {"parked" if int(ans[-1]) else "not parked"}')
             print(f'Sequencer is {"running normally" if int(ans[-2]) else "stopped"}')
             print(f'Frame buffer is {"frozen" if int(ans[-3]) else "not frozen"}')
             print(f'Gamma correction is {"enabled" if int(ans[-4]) else "disabled"}')
@@ -316,8 +316,11 @@ class dlpc350(object):
 
         :param bool apply_gamma: Whether to apply gamma correction while in video mode.
         """
-        apply_gamma = int(apply_gamma)
-        self.command('w', 0x00, 0x1a, 0x0e, [apply_gamma])
+        if apply_gamma:
+            apply_gamma = '10000000'
+        else:
+            apply_gamma = '00000000'
+        self.command('w', 0x00, 0x1a, 0x0e, bits_to_bytes(apply_gamma))
 
     def pattern_display(self, action='start'):
         """
@@ -630,7 +633,7 @@ def power_up():
 
 def set_gamma(value):
     """
-    Wakes LCR4500 up from standby mode.
+    Sets gamma.
     """
     with connect_usb() as lcr:
         lcr.set_gamma_correction(apply_gamma=value)
