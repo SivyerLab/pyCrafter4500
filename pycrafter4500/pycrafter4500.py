@@ -201,13 +201,14 @@ class dlpc350(object):
 
          (USB: CMD2: 0x02, CMD3: 0x0C)
          """
-        self.command('w', 0x00, 0x02, 0x0c)
+        self.command('r', 0x00, 0x1a, 0x0c, [])
         if pretty_print:
-            ans = bin(self.ans[0])
-            print(f'DMD micromirrors are {"parked" if ans[0] else "not parked"}')
-            print(f'\nSequencer is {"running normally" if ans[1] else "stopped"}')
-            print(f'\nFrame buffer is {"frozen" if ans[2] else "not frozen"}')
-            print(f'\nGamma correction is {"enabled" if ans[3] else "disabled"}')
+            # ans = str(bin(self.ans[4]))[2:]
+            ans = format(self.ans[4], '08b')
+            print(f'DMD micromirrors are {"parked" if int(ans[-1]) else "not parked"}')
+            print(f'Sequencer is {"running normally" if int(ans[-2]) else "stopped"}')
+            print(f'Frame buffer is {"frozen" if int(ans[-3]) else "not frozen"}')
+            print(f'Gamma correction is {"enabled" if int(ans[-4]) else "disabled"}')
 
     def set_power_mode(self, do_standby=False):
         """
@@ -232,6 +233,29 @@ class dlpc350(object):
         (USB: CMD2: 0x1A, CMD3: 0x1A)
         """
         self.command('w', 0x00, 0x1a, 0x1a, bits_to_bytes(conv_len(0x00, 8)))
+
+    def set_dmd_park(self, park=False):
+        """
+        This command is used to park or unpark the DMD, whenever system is idle user can send this command to park the
+        DMD.
+
+        (USB: CMD2: 0x06, CMD3: 0x09)
+
+        :param bool park: Whether to park the dmd mirrors
+        """
+        park = int(park)
+        self.command('w', 0x00, 0x06, 0x09, [park])
+
+    def set_buffer_freeze(self, freeze=False):
+        """
+        The Display Buffer Freeze command disables swapping the memory buffers.
+
+        (USB: CMD2: 0x10, CMD3: 0x0A)
+
+        :param bool park: Whether to park the dmd mirrors
+        """
+        park = int(freeze)
+        self.command('w', 0x00, 0x10, 0x0a, [freeze])
 
     def set_display_mode(self, mode='pattern'):
         """
