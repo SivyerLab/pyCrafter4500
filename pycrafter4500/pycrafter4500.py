@@ -626,3 +626,11 @@ def power_up():
     """
     with connect_usb() as lcr:
         lcr.set_power_mode(do_standby=False)
+
+
+def set_gamma(value):
+    """
+    Wakes LCR4500 up from standby mode.
+    """
+    with connect_usb() as lcr:
+        lcr.set_gamma_correction(apply_gamma=value)
