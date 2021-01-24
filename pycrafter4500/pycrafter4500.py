@@ -634,3 +634,4 @@ def set_gamma(value):
     """
     with connect_usb() as lcr:
         lcr.set_gamma_correction(apply_gamma=value)
+        lcr.get_main_status(True)
