@@ -195,6 +195,20 @@ class dlpc350(object):
         for i in self.ans:
             print(hex(i))
 
+    def get_main_status(self, pretty_print=False):
+        """The Main Status command shows the status of DMD park and DLPC350 sequencer, frame buffer, and gamma
+         correction.
+
+         (USB: CMD2: 0x02, CMD3: 0x0C)
+         """
+        self.command('w', 0x00, 0x02, 0x0c)
+        if pretty_print:
+            ans = bin(self.ans[0])
+            print(f'DMD micromirrors are {"parked" if ans[0] else "not parked"}')
+            print(f'\nSequencer is {"running normally" if ans[1] else "stopped"}')
+            print(f'\nFrame buffer is {"frozen" if ans[2] else "not frozen"}')
+            print(f'\nGamma correction is {"enabled" if ans[3] else "disabled"}')
+
     def set_power_mode(self, do_standby=False):
         """
         The Power Control places the DLPC350 in a low-power state and powers down the DMD interface. Standby mode should
@@ -265,6 +279,21 @@ class dlpc350(object):
             mode = modes.index(mode)
 
         self.command('w', 0x00, 0x1a, 0x23, [mode])
+
+    def set_gamma_correction(self, apply_gamma=True):
+        """
+        This command only works in video mode.
+
+        Because the DMD is inherently linear in response, the Gamma Correction command specifies the removal of the
+        gamma curve that is applied to the video data at the source. Two degamma tables are provided: TI Video
+        (Enhanced) and TI Video (Max Brightness).
+
+        (USB: CMD2: 0x1A, CMD3: 0x0E)
+
+        :param bool apply_gamma: Whether to apply gamma correction while in video mode.
+        """
+        apply_gamma = int(apply_gamma)
+        self.command('w', 0x00, 0x1a, 0x0e, [apply_gamma])
 
     def pattern_display(self, action='start'):
         """
