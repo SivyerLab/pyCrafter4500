@@ -2,13 +2,14 @@
 
 # pycrafter4500
 
-This is an unofficial API for some functionality of the Texas Instruments Lightcrafter 4500.
+This is an unofficial API for some functionality of the Texas Instruments Lightcrafter 4500. It is no longer maintained.
 
 Code adapted for the TI Lightcrafter 4500 from https://github.com/csi-dcsc/Pycrafter6500
 
 The DLPC 350 is the controller chip on the LCR 4500.
 
 TI DLPC 350 documentation can be found at: http://www.ti.com/product/DLPC350/technicaldocuments
+pycrafter4500 documentation can be found at: https://pycrafter4500.readthedocs.io/en/latest/moduledoc.html
 
 Doc strings adapted from dlpc350_api.cpp source code.
 
