@@ -22,7 +22,7 @@ with Zadig utility (http://zadig.akeo.ie/)
 
 __author__  = 'Alexander Tomlinson'
 __email__   = 'mexander@gmail.com'
-__version__ = '0.5'
+__version__ = '0.7'
 
 
 def conv_len(a, l):

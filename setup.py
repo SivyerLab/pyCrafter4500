@@ -5,7 +5,7 @@ README = Path('README.md').read_text()
 
 setup(
     name='pycrafter4500',
-    version='0.6',
+    version='0.7',
     packages=['pycrafter4500'],
     install_requires=['pyusb'],
 
